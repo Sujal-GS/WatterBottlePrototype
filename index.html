@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
 
-    <!-- NEW: SVG Favicon -->
+    <!-- SVG Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='rgb(5, 214, 228)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='60' font-family='Fira Code, monospace' fill='rgb(37, 36, 35)'>H</text></svg>">
 
     <!-- Tailwind Config to set 'Fira Code' as the default font -->
@@ -288,6 +288,46 @@
         .modal-close-btn {
             cursor: none;
         }
+        
+        /* UPDATED: Dev Credit (now a link) */
+        .dev-credit {
+            position: fixed;
+            bottom: 1.5rem; /* 24px */
+            right: 1.5rem; /* 24px */
+            text-align: right;
+            opacity: 0;
+            z-index: 100;
+            text-decoration: none;
+            cursor: none; /* Use custom cursor */
+        }
+        .dev-credit p {
+            margin: 0;
+            font-size: 0.875rem; /* 14px */
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.4);
+            transition: color 0.3s ease;
+        }
+        .dev-credit:hover p {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        /* Style for the name */
+        .dev-credit .name {
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.6);
+            transition: color 0.3s ease;
+        }
+        .dev-credit:hover .name {
+            color: var(--color-cyan);
+            text-shadow: 0 0 8px var(--color-cyan);
+        }
+        /* Fading in the credit */
+        #auth-credit {
+            animation: fadeIn 1s ease 1s forwards; /* Fades in on auth screen */
+        }
+        #dash-credit {
+            animation: fadeIn 1s ease 1s forwards; /* Fades in on dashboard */
+        }
+
 
     </style>
 </head>
@@ -440,7 +480,7 @@
         <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-2xl relative animate-fadeInUp">
             <h2 class="text-2xl font-bold mb-4 text-glow" style="--glow-color: var(--color-yellow);">CyberSec Con 2025 - Event Map</h2>
             
-            <!-- NEW: Custom SVG Map -->
+            <!-- Custom SVG Map -->
             <div class="bg-gray-800 border border-gray-700 rounded-md h-96 flex items-center justify-center p-4">
                 <svg viewBox="0 0 400 300" class="w-full h-full">
                     <rect class="svg-map-bg" width="400" height="300" rx="8"></rect>
@@ -530,6 +570,19 @@
         </div>
     </div>
 
+    <!-- UPDATED: Dev Credit Links -->
+    <!-- Credit on Auth Screen -->
+    <a id="auth-credit" href="https://www.linkedin.com/in/sujal-g-s/" target="_blank" rel="noopener noreferrer" class="dev-credit hidden">
+        <p>A prototype by</p>
+        <p class="name">Sujal G S</p>
+    </a>
+    
+    <!-- Credit on Dashboard Screen -->
+    <a id="dash-credit" href="https://www.linkedin.com/in/sujal-g-s/" target="_blank" rel="noopener noreferrer" class="dev-credit hidden">
+        <p>A prototype by</p>
+        <p class="name">Sujal G S</p>
+    </a>
+
 
     <script>
         // --- BOLDER Animated Cursor Logic ---
@@ -576,11 +629,14 @@
         const screenScan = document.getElementById('screen-scan');
         const screenAuth = document.getElementById('screen-auth');
         const screenDashboard = document.getElementById('screen-dashboard');
+        const authCredit = document.getElementById('auth-credit'); // Get auth credit
+        const dashCredit = document.getElementById('dash-credit'); // Get dash credit
         
         // Simulate scanning
         setTimeout(() => {
             screenScan.classList.add('hidden');
             screenAuth.classList.remove('hidden');
+            authCredit.classList.remove('hidden'); // Show auth credit
         }, 2000); // 2 second scan
 
         // --- Authentication Logic ---
@@ -619,7 +675,9 @@
 
                 setTimeout(() => {
                     screenAuth.classList.add('hidden');
+                    authCredit.classList.add('hidden'); // Hide auth credit
                     screenDashboard.classList.remove('hidden');
+                    dashCredit.classList.remove('hidden'); // Show dash credit
                     // Animate numbers on dashboard load
                     animateNumber('total-liters', 0, 3.0, 1500, 1);
                     animateNumber('total-refills', 0, 4, 1500, 0);
