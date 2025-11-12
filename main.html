@@ -1,17 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HydraID Prototype</title>
-    <!-- 1. Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- jsPDF Library for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <!-- NEW: Tailwind Config to set 'Work Sans' as the default font -->
+    <!--
+    This is the corrected Google Font <link> block.
+    I fixed the typo in 'Spectral' (0,7E00 -> 0,700)
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+
+    <!-- NEW: SVG Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='rgb(5, 214, 228)'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-size='60' font-family='Fira Code, monospace' fill='rgb(37, 36, 35)'>H</text></svg>">
+
+    <!-- Tailwind Config to set 'Fira Code' as the default font -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        /* UPDATED to use 'Fira Code' from your list */
                         sans: ['Fira Code', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
                     },
                 }
@@ -19,18 +33,10 @@
         }
     </script>
 
-    <!-- REMOVED old 'Work Sans' font import -->
-
-    <!-- NEW FONTS IMPORTED -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,7E00;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
-
-
-    <!-- 2. Custom CSS for the 'anime.js' aesthetic -->
     <style>
-        /* Define the new color palette as CSS variables */
-        body {
+        /* Define custom colors based on user's palette */
+        :root {
+            --color-bg: rgb(37, 36, 35);
             --color-yellow: rgb(255, 204, 42);
             --color-red: rgb(255, 75, 75);
             --color-orange: rgb(255, 168, 40);
@@ -39,652 +45,959 @@
             --color-mint: rgb(102, 255, 188);
             --color-lime: rgb(183, 255, 84);
             
-            /* Matte dark background */
-            background-color: #252423; /* rgb(37, 36, 35) */
-            color: #e0e0e0;
-            /* REMOVED font-family from here, Tailwind will handle it now */
-            overflow-x: hidden; /* Prevent horizontal scroll */
+            --color-card: #1f1f2a;
+            --color-bg-dark: #14141d;
         }
 
-        /* NEW: Canvas background */
-        #constellation-bg {
+        /* Use the matte black background */
+        body {
+            background-color: var(--color-bg);
+            color: #E0E0E0;
+            font-family: 'Fira Code', sans-serif;
+            overflow-x: hidden;
+            /* Hide the default OS cursor */
+            cursor: none;
+        }
+
+        /* --- BOLDER Animated Cursor --- */
+        #cursor-dot {
+            width: 10px; /* Was 8px */
+            height: 10px; /* Was 8px */
+            background-color: var(--color-cyan);
+            border-radius: 50%;
             position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 9999;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        #cursor-ring {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--color-cyan); /* Was 2px */
+            border-radius: 50%;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 9999;
+            transition: width 0.3s ease, height 0.3s ease, border-width 0.3s ease, opacity 0.3s ease;
+        }
+        /* BOLDER Cursor hover state */
+        body[data-hover="true"] #cursor-dot {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(1.5);
+        }
+        body[data-hover="true"] #cursor-ring {
+            width: 50px; /* Was 60px, now smaller and thicker */
+            height: 50px; /* Was 60px */
+            border-width: 4px; /* Was 3px */
+            opacity: 1; /* Was 0.7 */
+        }
+        /* --- End Animated Cursor --- */
+
+
+        /* Glass card effect */
+        .glass-card {
+            background-color: rgba(30, 30, 30, 0.6); /* Semi-transparent dark card */
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Text glow effect */
+        .text-glow {
+            text-shadow: 0 0 8px var(--glow-color), 0 0 16px var(--glow-color), 0 0 32px var(--glow-color);
+        }
+
+        /* Card glow effect on hover */
+        .dashboard-card {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .dashboard-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 0 20px var(--glow-color), 0 0 40px var(--glow-color);
+            border-color: var(--glow-color);
+        }
+        
+        /* Animated button styles */
+        .btn-animated {
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            transition: color 0.4s ease-in-out;
+            border: 2px solid;
+            /* Make buttons cursor-none */
+            cursor: none;
+        }
+        .btn-animated::before {
+            content: '';
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1; /* Place it behind all content */
+            background-color: var(--btn-color);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease-in-out;
+            z-index: -1;
+        }
+        .btn-animated:hover {
+            color: var(--color-bg); /* Text color on hover */
+        }
+        .btn-animated:hover::before {
+            transform: scaleX(1);
+            transform-origin: left;
+        }
+        .btn-cyan { --btn-color: var(--color-cyan); border-color: var(--color-cyan); color: var(--color-cyan); }
+        .btn-red { --btn-color: var(--color-red); border-color: var(--color-red); color: var(--color-red); }
+        .btn-green { --btn-color: var(--color-green); border-color: var(--color-green); color: var(--color-green); }
+        .btn-mint { --btn-color: var(--color-mint); border-color: var(--color-mint); color: var(--color-mint); }
+        .btn-yellow { --btn-color: var(--color-yellow); border-color: var(--color-yellow); color: var(--color-yellow); }
+        
+        .btn-animated:disabled {
+            opacity: 0.5;
+            cursor: none;
+        }
+        .btn-animated:disabled::before {
+            transform: scaleX(0);
         }
 
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
+        /* PIN input styling */
+        .pin-input {
+            width: 4rem; /* 64px */
+            height: 5rem; /* 80px */
+            text-align: center;
+            font-size: 2.25rem; /* 36px */
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.5rem; /* 8px */
+            color: white;
+            transition: all 0.2s ease;
+            cursor: none; /* Make inputs cursor-none */
         }
-        ::-webkit-scrollbar-track {
-            background: #1a1a2e;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--color-cyan);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--color-lime);
-        }
-
-        /* Keyframe Animations */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-30px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+        .pin-input:focus {
+            outline: none;
+            border-color: var(--color-cyan);
+            box-shadow: 0 0 15px var(--color-cyan);
         }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes pulseGlow {
-            0%, 100% { 
-                opacity: 1;
-                text-shadow: 0 0 8px rgba(255, 255, 255, 0.7), 0 0 16px var(--color-cyan); /* LIME -> CYAN */
-            }
-            50% { 
-                opacity: 0.8;
-                text-shadow: 0 0 12px rgba(255, 255, 255, 1), 0 0 24px var(--color-cyan); /* LIME -> CYAN */
-            }
+        /* Simple scanning '+' icon */
+        .scan-icon {
+            font-size: 10rem;
+            font-weight: 100;
+            line-height: 1;
+            color: var(--color-cyan);
+            animation: pulse-scan 1.5s infinite ease-in-out;
         }
         
-        @keyframes scanLine {
-            0% { top: 0; }
-            100% { top: calc(100% - 4px); }
+        @keyframes pulse-scan {
+            0%, 100% {
+                opacity: 0.3;
+                transform: scale(0.95);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
         }
 
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Shake animation for auth error */
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-5px); }
             50% { transform: translateX(5px); }
             75% { transform: translateX(-5px); }
         }
-
-        /* Animation Utility Classes */
-        .animate-fadeInDown {
-            animation: fadeInDown 0.8s ease-out forwards;
-        }
-        .animate-fadeInUp {
-            animation: fadeInUp 0.6s ease-out forwards;
-        }
-        .animate-pulseGlow {
-            animation: pulseGlow 2.5s infinite ease-in-out;
-        }
         .animate-shake {
-            animation: shake 0.3s linear;
+            animation: shake 0.3s ease-in-out;
         }
 
-        /* Staggered animation for dashboard cards */
-        .dashboard-card {
-            opacity: 0;
-            animation: fadeInUp 0.5s ease-out forwards;
+        @keyframes tickUp {
+            from { content: '0'; }
+        }
+        /* New animation for verification check */
+        @keyframes check-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-check-in {
+            /* This animation needs 'forwards' to hold its final state */
+            animation: check-in 0.3s ease-out forwards;
         }
 
-        /* New animation for card content */
-        .card-content-anim {
-            opacity: 0;
-            animation: fadeInUp 0.6s ease-out forwards;
-            animation-delay: 0.3s; /* Default delay */
+        /*
+         FIX: Added 'forwards' to all animation classes to
+         ensure they hold their final state and don't vanish.
+        */
+        .animate-fadeIn { 
+            animation: fadeIn 0.5s ease-out forwards; 
+        }
+        .animate-fadeInUp { 
+            animation: fadeInUp 0.5s ease-out forwards; 
         }
 
-        /* Dark Card effect (replaces glass-card) */
-        .glass-card {
-            background: #1f1f2a;
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-            border: 1px solid #3a3a5a; /* Darker border */
-            border-radius: 1rem;
-            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        /* Keyframes for bar graph animation */
+        @keyframes grow-bar {
+            from { width: 0%; }
+            to { width: var(--bar-width, 0%); }
         }
-        .glass-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--color-cyan);
-            box-shadow: 0 10px 30px rgba(5, 214, 228, 0.2); /* Cyan shadow */
+        .animate-grow-bar {
+            animation: grow-bar 1.5s ease-out 0.5s forwards;
         }
 
-        /* PIN input styling */
-        .pin-input {
-            width: 50px;
-            height: 60px;
-            font-size: 2rem;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.3);
-            border: 2px solid var(--color-cyan);
-            border-radius: 0.5rem;
-            color: #e0e0e0;
-            caret-color: var(--color-cyan);
-            transition: all 0.2s ease;
+        /* Custom SVG map styles */
+        .svg-map-bg { fill: rgba(30, 30, 30, 0.7); stroke: var(--color-yellow); stroke-width: 1; }
+        .svg-map-room { fill: rgba(255, 204, 42, 0.1); stroke: var(--color-yellow); stroke-width: 0.5; }
+        .svg-map-text { font-family: 'Fira Code', monospace; fill: #E0E0E0; font-size: 10px; }
+        .svg-map-label { font-family: 'Fira Code', monospace; fill: var(--color-yellow); font-size: 12px; font-weight: bold; }
+        .svg-map-you-are-here {
+            fill: var(--color-cyan);
+            stroke: #fff;
+            stroke-width: 1.5;
+            animation: pulse-dot 1.5s infinite;
         }
-        .pin-input:focus {
-            outline: none;
-            border-color: var(--color-cyan); /* LIME -> CYAN */
-            box-shadow: 0 0 15px var(--color-cyan); /* LIME -> CYAN */
+        @keyframes pulse-dot {
+            0%, 100% { r: 4px; opacity: 1; }
+            50% { r: 6px; opacity: 0.7; }
         }
 
-        /* New Animated Button Style */
-        .btn-animated {
-            position: relative;
-            overflow: hidden;
+        /* Hide scrollbar */
+        ::-webkit-scrollbar {
+            width: 0;
             background: transparent;
-            border: 2px solid; /* Set color with utility class */
-            color: #e0e0e0;
-            transition: color 0.4s ease;
-            z-index: 1;
         }
-        .btn-animated::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: var(--btn-grad); /* Use CSS variable */
-            transition: left 0.4s ease;
-            z-index: -1;
+
+        /* Modal close buttons */
+        .modal-close-btn {
+            cursor: none;
         }
-        .btn-animated:hover {
-            color: #fff;
-        }
-        .btn-animated:hover::before {
-            left: 0;
-        }
+
     </style>
 </head>
-<body class="min-h-screen w-full flex items-center justify-center p-4">
-    <!-- NEW Animated constellation background -->
-    <canvas id="constellation-bg"></canvas>
+<body class="min-h-screen p-4 md:p-8 relative">
 
-    <div id="app-container" class="w-full max-w-6xl mx-auto">
+    <!-- NEW: Animated Cursor Elements -->
+    <div id="cursor-dot"></div>
+    <div id="cursor-ring"></div>
 
-        <!-- =================================== -->
-        <!-- SCREEN 1: SCANNING (SIMULATED)    -->
-        <!-- =================================== -->
-        <div id="scan-screen" class="flex flex-col items-center justify-center min-h-[400px] text-center">
-            <h1 class="text-4xl md:text-6xl font-bold animate-pulseGlow mb-8" style="color: var(--color-cyan);">HydraID</h1> <!-- LIME -> CYAN -->
+    <!-- Animated Particle Background -->
+    <canvas id="particle-canvas" class="fixed top-0 left-0 w-full h-full -z-10"></canvas>
+
+    <main class="max-w-7xl mx-auto z-10">
+
+        <!-- Screen 1: Scanning -->
+        <div id="screen-scan" class="min-h-[90vh] flex flex-col items-center justify-center text-center animate-fadeIn">
             
-            <!-- Scanning Box -->
-            <div class="relative w-48 h-48 md:w-64 md:h-64 bg-gray-900/50 rounded-lg border-2 border-cyan-600 overflow-hidden flex items-center justify-center shadow-2xl shadow-cyan-500/30" style="border-color: var(--color-cyan); box-shadow: 0 0 30px rgba(5, 214, 228, 0.3);">
-                <!-- Bottle Icon -->
-                <svg class="w-24 h-24 md:w-32 md:h-32 text-cyan-400 opacity-30" style="color: var(--color-cyan);" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path><path d="M18.32 8.68a9 9 0 1 0-12.64 0" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M12 21a9 9 0 0 0 9-9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M12 3a9 9 0 0 0-9 9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+            <!-- Simple '+' icon animation -->
+            <div class="scan-icon mb-8">+</div>
 
-                <!-- Scan Line Animation -->
-                <div class="absolute left-0 w-full h-1" style="animation: scanLine 2s infinite alternate ease-in-out; background-color: var(--color-cyan); box-shadow: 0 0 15px 3px var(--color-cyan);"></div>
-            </div>
-            
-            <p class="mt-8 text-xl text-cyan-300 opacity-0 animate-fadeInUp" style="animation-delay: 0.5s; color: var(--color-cyan);">ACQUIRING DIGITAL SIGNATURE...</p>
+            <h1 class="text-4xl font-bold text-glow" style="--glow-color: var(--color-cyan);">Scanning HydraID...</h1>
+            <p class="text-xl text-gray-400 mt-2">Connecting to secure server...</p>
         </div>
 
-        <!-- =================================== -->
-        <!-- SCREEN 2: AUTHENTICATION          -->
-        <!-- =================================== -->
-        <div id="auth-screen" class="hidden flex-col items-center justify-center min-h-[400px] text-center px-4">
-            
-            <!-- NEW: Wrapped in animated glass-card -->
-            <!-- ADDED flex flex-col items-center to center all content inside the card -->
-            <div class="glass-card p-6 md:p-10 w-full max-w-lg animate-fadeInDown flex flex-col items-center">
-                <h1 class="text-3xl md:text-5xl font-bold animate-fadeInDown" style="color: var(--color-cyan); animation-delay: 0.1s;">AUTHENTICATION REQUIRED</h1> <!-- LIME -> CYAN, added delay -->
+        <!-- Screen 2: Authentication -->
+        <div id="screen-auth" class="min-h-[90vh] flex flex-col items-center justify-center hidden animate-fadeIn">
+            <!-- Centered Glass Card for Auth -->
+            <div class="glass-card p-8 md:p-12 w-full max-w-lg animate-fadeInUp flex flex-col items-center" style="animation-delay: 0.2s;">
+                <h1 class="text-4xl md:text-5xl font-bold mb-4 text-glow animate-fadeInUp" style="--glow-color: var(--color-cyan); animation-delay: 0.3s;">AUTHENTICATION REQUIRED</h1>
+                <p class="text-lg text-gray-300 mb-2 animate-fadeInUp" style="animation-delay: 0.4s;">Enter Passcode for Bottle ID: <span class="font-bold" style="color: var(--color-cyan);">HYDRA-DEMO-001</span></p>
                 
-                <p class="text-lg text-gray-300 mt-4 animate-fadeInDown" style="animation-delay: 0.2s;">Enter Passcode for Bottle ID: <span class="font-bold text-white">HYDRA-DEMO-001</span></p> <!-- Added animation -->
+                <!-- Auth Error Message -->
+                <p id="auth-error" class="text-lg text-center font-bold hidden" style="color: var(--color-red); animation-delay: 0.4s;">
+                    Access Denied. Please try again.
+                </p>
 
-                <!-- PIN Input Area -->
-                <!-- This div is now centered by its parent's 'items-center' -->
-                <div id="pin-inputs" class="flex space-x-3 md:space-x-4 mt-8 animate-fadeInDown" style="animation-delay: 0.3s;"> <!-- Delay adjusted -->
-                    <input type="password" inputmode="numeric" maxlength="1" class="pin-input" data-index="0">
-                    <input type="password" inputmode="numeric" maxlength="1" class="pin-input" data-index="1">
-                    <input type="password" inputmode="numeric" maxlength="1" class="pin-input" data-index="2">
-                    <input type="password" inputmode="numeric" maxlength="1" class="pin-input" data-index="3">
+
+                <div id="pin-inputs" class="flex gap-4 my-8 animate-fadeInUp" style="animation-delay: 0.5s;">
+                    <!-- PIN inputs are type="password" to hide input -->
+                    <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
+                    <input type="password" class="pin-input" maxlength="1" inputmode="numeric">
                 </div>
 
-                <p id="auth-error" class="mt-4 h-6 text-sm hidden" style="color: var(--color-red);">Invalid Passcode. Please try again.</p>
-
-                <button id="verify-button" class="btn-animated mt-8 text-white font-bold py-3 px-12 rounded-lg text-lg transition-all duration-300 animate-fadeInDown" style="border-color: var(--color-cyan); --btn-grad: linear-gradient(90deg, var(--color-cyan), var(--color-mint)); animation-delay: 0.4s;"> <!-- LIME -> MINT, delay adjusted -->
-                    VERIFY IDENTITY
+                <button id="auth-button" class="btn-animated btn-cyan w-full max-w-xs font-bold py-3 px-4 rounded-lg transition-all animate-fadeInUp" style="animation-delay: 0.6s;">
+                    Verify Identity
                 </button>
             </div>
-
         </div>
 
-        <!-- =================================== -->
-        <!-- SCREEN 3: DASHBOARD               -->
-        <!-- =================================== -->
-        <div id="dashboard-screen" class="hidden">
-            <!-- Header -->
-            <header class="mb-10 text-center animate-fadeInDown">
-                <h1 class="text-4xl md:text-6xl font-bold" style="color: var(--color-cyan);"> <!-- LIME -> CYAN -->
-                    HydraID Dashboard
-                </h1>
-                <p class="text-xl text-gray-300 mt-2 opacity-0 animate-fadeInDown" style="animation-delay: 0.2s;">Bottle ID: <span class="font-bold text-white">HYDRA-DEMO-001</span></C>
+        <!-- Screen 3: Dashboard -->
+        <div id="screen-dashboard" class="hidden">
+            <header class="mb-8 md:mb-12">
+                <h1 class="text-5xl md:text-6xl font-extrabold mb-2 animate-fadeInUp">HydraID Dashboard</h1>
+                <p class="text-xl text-gray-400 animate-fadeInUp" style="animation-delay: 0.1s;">Bottle ID: <span class="font-mono" style="color: var(--color-cyan);">HYDRA-DEMO-001</span></p>
             </header>
 
-            <!-- Dashboard Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                 
-                <!-- Card 1: Hydration Log (Feature 1 & 5) -->
-                <div class="dashboard-card glass-card p-6" style="animation-delay: 0.1s;">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center" style="color: var(--color-cyan);">
-                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Hydration Log
-                    </h2>
-                    
-                    <!-- New Total Volume Display -->
-                    <div class="mb-4 card-content-anim" style="animation-delay: 0.3s;">
-                        <p class="text-lg text-gray-300">Total Intake Today:</p>
-                        <p class="text-5xl font-extrabold text-white my-1">
-                            <span id="total-liters">3.0</span> L
-                        </p>
-                        <p class="text-sm" style="color: var(--color-cyan);">(Bottle Size: 750ml)</p>
+                <!-- Card 1: Hydration Log -->
+                <div class="dashboard-card glass-card p-6 animate-fadeInUp" style="--glow-color: var(--color-cyan); animation-delay: 0.1s;">
+                    <h2 class="text-2xl font-bold mb-4 text-glow" style="--glow-color: var(--color-cyan);">Hydration Log</h2>
+                    <div class="text-center mb-4">
+                        <span class="text-5xl font-bold" id="total-liters" style="color: var(--color-cyan);">3.0</span>
+                        <span class="text-xl text-gray-300">Liters</span>
                     </div>
-
-                    <ul id="log-list" class="space-y-2 text-gray-200 h-24 overflow-y-auto pr-2 card-content-anim" style="animation-delay: 0.4s;">
-                        <li>Refill (750ml) logged: 4:30 PM</li>
-                        <li>Refill (750ml) logged: 1:15 PM</li>
-                        <li>Refill (750ml) logged: 10:05 AM</li>
-                        <li>Refill (750ml) logged: 8:00 AM</li>
-                    </ul>
-                    <button id="log-refill-button" class="btn-animated mt-4 w-full text-white font-bold py-2 px-4 rounded-lg transition-all card-content-anim" style="border-color: var(--color-cyan); --btn-grad: linear-gradient(90deg, var(--color-cyan), var(--color-mint)); animation-delay: 0.5s;">
+                    <p class="text-center text-gray-400 mb-4">Bottle Size: 750ml</p>
+                    <button id="log-refill-button" class="btn-animated btn-cyan w-full font-bold py-3 px-4 rounded-lg transition-all">
                         Log 750ml Refill
                     </button>
+                    <div class="mt-4">
+                        <h3 class="font-semibold mb-2 text-gray-300">Recent Activity:</h3>
+                        <ul id="log-list" class="text-gray-400 text-sm h-24 overflow-y-auto space-y-1 pr-2">
+                            <li>Refill (750ml) logged: 20:15</li>
+                            <li>Refill (750ml) logged: 16:40</li>
+                            <li>Refill (750ml) logged: 12:30</li>
+                            <li>Refill (750ml) logged: 09:05</li>
+                        </ul>
+                    </div>
                 </div>
 
-                <!-- Card 2: Ownership (Feature 2) -->
-                <div class="dashboard-card glass-card p-6" style="animation-delay: 0.2s;">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center" style="color: var(--color-red);">
-                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                        Owner Identity
-                    </h2>
-                    <p class="text-lg card-content-anim" style="animation-delay: 0.3s;">This bottle belongs to:</p>
-                    <p class="text-3xl font-extrabold text-white my-3 card-content-anim" style="animation-delay: 0.4s;">Sujal</p>
-                    <button id="report-found-button" class="btn-animated mt-4 w-full text-white font-bold py-2 px-4 rounded-lg transition-all card-content-anim" style="border-color: var(--color-red); --btn-grad: linear-gradient(90deg, var(--color-red), var(--color-orange)); animation-delay: 0.5s;">
+                <!-- Card 2: Ownership / Lost & Found -->
+                <div class="dashboard-card glass-card p-6 animate-fadeInUp" style="--glow-color: var(--color-red); animation-delay: 0.2s;">
+                    <h2 class="text-2xl font-bold mb-4 text-glow" style="--glow-color: var(--color-red);">Ownership</h2>
+                    <p class="text-lg text-gray-300">This bottle belongs to:</p>
+                    <p class="text-4xl font-bold my-4" style="color: var(--color-red);">Sujal</p>
+                    <p class="text-gray-400 mb-4">If found, please report it. A notification will be sent to the owner.</p>
+                    <button id="report-found-button" class="btn-animated btn-red w-full font-bold py-3 px-4 rounded-lg transition-all">
                         Report as Found
                     </button>
                 </div>
 
-                <!-- Card 3: Product Authenticity (Feature 3) -->
-                <div class="dashboard-card glass-card p-6" style="animation-delay: 0.3s;">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center" style="color: var(--color-green);">
-                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        Product Integrity
-                    </h2>
-                    <p class="text-lg card-content-anim" style="animation-delay: 0.3s;">Status:</p>
-                    <p class="text-3xl font-extrabold my-3 card-content-anim" style="color: var(--color-green); animation-delay: 0.4s;">GENUINE & SEALED</p>
-                    <p class="text-sm text-gray-300 card-content-anim" style="animation-delay: 0.5s;">Verified by: HydroPure Pvt. Ltd.<br>Batch: 77-A9F | mfg. 11/2025</p>
-                </div>
-
-                <!-- Card 4: Eco-Rewards (Feature 5) -->
-                <div class="dashboard-card glass-card p-6" style="animation-delay: 0.4s;">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center" style="color: var(--color-yellow);">
-                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343m11.314 11.314a8 8 0 01-11.314 0m11.314 0L20 20M6.343 7.343L4 4m6.5 12.5l-2.5 2.5m3.5-11.5l-2.5-2.5m11.5 3.5l2.5-2.5M4 20l2.5-2.5M17.657 7.343l-2.5 2.5"></path></svg>
-                        Eco-Rewards
-                    </h2>
-                    <p class="text-lg card-content-anim" style="animation-delay: 0.3s;">Total Refills:</p>
-                    <p class="text-5xl font-extrabold text-white my-2 card-content-anim" style="animation-delay: 0.4s;">
-                        <span id="eco-refills">84</span>
+                <!-- Card 3: Authenticity -->
+                <div class="dashboard-card glass-card p-6 animate-fadeInUp" style="--glow-color: var(--color-green); animation-delay: 0.3s;">
+                    <h2 class="text-2xl font-bold mb-4 text-glow" style="--glow-color: var(--color-green);">Authenticity</h2>
+                    <p class="text-lg text-gray-300">Status:</p>
+                    <p class="text-2xl font-extrabold my-3 tracking-wider" style="color: var(--color-green);">
+                        GENUINE & SEALED
                     </p>
-                    <p class="text-lg font-bold card-content-anim" style="color: var(--color-yellow); animation-delay: 0.5s;">
-                        Points Earned: <span id="eco-points">840</span>
-                    </p>
-                    <p class="text-sm text-gray-300 mt-3 card-content-anim" style="animation-delay: 0.6s;">You've saved 84 single-use bottles!</p>
+                    <p class="text-sm text-gray-400">Verified by: HydroPure Pvt. Ltd.</p>
+                    <p class="text-sm text-gray-400">Batch: 77-A9F | Mfg. 11/2025</p>
+                    <button id="verify-blockchain-button" class="btn-animated btn-green w-full font-bold py-3 px-4 rounded-lg transition-all mt-6">
+                        Verify on Blockchain (Demo)
+                    </button>
                 </div>
 
-                <!-- Card 5: Event Integration (Feature 6) -->
-                <div class="dashboard-card glass-card p-6" style="animation-delay: 0.5s;">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center" style="color: var(--color-orange);">
-                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-2.146l-1.644 1.291M17 20h-2v-2a3 3 0 015.356-2.146l-1.644 1.291M17 20L15 18M9 20h2v-2a3 3 0 00-5.356-2.146L4 17.143M9 20l2-2M12 8a4 4 0 100-8 4 4 0 000 8z"></path></svg>
-                        Event Integration
-                    </h2>
-                    <p class="text-lg card-content-anim" style="animation-delay: 0.3s;">Event:</p>
-                    <p class="text-2xl font-extrabold text-white my-2 card-content-anim" style="animation-delay: 0.4s;">CyberSec Marathon 2025</p>
-                    <p class="text-lg font-bold card-content-anim" style="color: var(--color-orange); animation-delay: 0.5s;">Checkpoint 3/5: REACHED</p>
-                    <p class="text-sm text-gray-300 mt-3 card-content-anim" style="animation-delay: 0.6s;">Next: Hydration Station @ Mile 10</p>
-                </div>
-
-                <!-- Card 6: Awareness Message (Feature 4 & 7) -->
-                <div class="dashboard-card glass-card p-6" style="animation-delay: 0.6s;">
-                    <h2 class="text-2xl font-bold mb-4 flex items-center" style="color: var(--color-mint);">
-                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707.707M12 21v-1m0-8a4 4 0 100-8 4 4 0 000 8z"></path></svg>
-                        HydraID Alert
-                    </h2>
-                    <div class="text-lg text-gray-200 h-36 flex items-center justify-center text-center card-content-anim" style="animation-delay: 0.3s;">
-                        <p id="security-tip-text" class="text-xl font-medium transition-all duration-300">
-                            Remember to stay hydrated... and change your passwords regularly!
-                        </p>
+                <!-- Card 4: Eco Rewards -->
+                <div class="dashboard-card glass-card p-6 animate-fadeInUp" style="--glow-color: var(--color-mint); animation-delay: 0.4s;">
+                    <h2 class="text-2xl font-bold mb-4 text-glow" style="--glow-color: var(--color-mint);">Eco Rewards</h2>
+                    <p class="text-lg text-gray-300">Your Impact (vs. plastic bottles):</p>
+                    <div class="text-center my-4">
+                        <span class="text-4xl font-bold" id="total-refills" style="color: var(--color-mint);">4</span>
+                        <span class="text-xl text-gray-300">Refills</span>
                     </div>
+                    <!-- This button now opens the new stats modal -->
+                    <button id="open-stats-modal-button" class="btn-animated btn-mint w-full font-bold py-3 px-4 rounded-lg transition-all">
+                        View Sustainability Stats
+                    </button>
+                </div>
+
+                <!-- Card 5: Awareness Campaign -->
+                <div class="dashboard-card glass-card p-6 animate-fadeInUp" style="--glow-color: var(--color-orange); animation-delay: 0.5s;">
+                    <h2 class="text-2xl font-bold mb-4 text-glow" style="--glow-color: var(--color-orange);">Awareness</h2>
+                    <p class="text-lg text-gray-300">Today's Tip:</p>
+                    <p class="text-xl font-medium my-3" style="color: var(--color-orange);">
+                        "Remember to stay hydrated — and change your passwords regularly!"
+                    </p>
+                    <!-- "Learn More" button was removed as requested -->
+                </div>
+
+                <!-- Card 6: Event Integration -->
+                <div class="dashboard-card glass-card p-6 animate-fadeInUp" style="--glow-color: var(--color-yellow); animation-delay: 0.6s;">
+                    <h2 class="text-2xl font-bold mb-4 text-glow" style="--glow-color: var(--color-yellow);">Event Integration</h2>
+                    <p class="text-lg text-gray-300">Current Event:</p>
+                    <p class="text-3xl font-bold my-3" style="color: var(--color-yellow);">CyberSec Con 2025</p>
+                    <p class="text-gray-400 mb-4">Check-in: <span class="font-medium text-gray-200">Main Hall</span></p>
+                    <button id="view-map-button" class="btn-animated btn-yellow w-full font-bold py-3 px-4 rounded-lg transition-all">
+                        View Event Map
+                    </button>
                 </div>
 
             </div>
         </div>
+
+    </main>
+    
+    <!-- Dummy Map Modal -->
+    <div id="map-modal" class="fixed inset-0 bg-black bg-opacity-80 backdrop-filter backdrop-blur-md flex items-center justify-center p-4 z-50 hidden animate-fadeIn">
+        <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-2xl relative animate-fadeInUp">
+            <h2 class="text-2xl font-bold mb-4 text-glow" style="--glow-color: var(--color-yellow);">CyberSec Con 2025 - Event Map</h2>
+            
+            <!-- NEW: Custom SVG Map -->
+            <div class="bg-gray-800 border border-gray-700 rounded-md h-96 flex items-center justify-center p-4">
+                <svg viewBox="0 0 400 300" class="w-full h-full">
+                    <rect class="svg-map-bg" width="400" height="300" rx="8"></rect>
+                    
+                    <!-- Main Hall -->
+                    <rect class="svg-map-room" x="50" y="50" width="150" height="200" rx="4"></rect>
+                    <text class="svg-map-label" x="125" y="140" text-anchor="middle">Main Hall</text>
+                    <text class="svg-map-text" x="125" y="160" text-anchor="middle">(Stage & Keynotes)</text>
+                    
+                    <!-- 'You Are Here' Marker -->
+                    <circle class="svg-map-you-are-here" cx="125" cy="190" r="4"></circle>
+                    <text class="svg-map-text" x="125" y="205" text-anchor="middle">YOU ARE HERE</text>
+
+                    <!-- Expo Area -->
+                    <rect class="svg-map-room" x="220" y="50" width="130" height="120" rx="4"></rect>
+                    <text class="svg-map-label" x="285" y="105" text-anchor="middle">Expo Area</text>
+                    <text class="svg-map-text" x="285" y="125" text-anchor="middle">(Sponsor Booths)</text>
+
+                    <!-- Workshops -->
+                    <rect class="svg-map-room" x="220" y="190" width="130" height="60" rx="4"></rect>
+                    <text class="svg-map-label" x="285" y="225" text-anchor="middle">Workshops</text>
+                    
+                    <!-- Labels -->
+                    <text class="svg-map-text" x="50" y="30" text-anchor="start">Entrance</text>
+                    <text class="svg-map-text" x="350" y="30" text-anchor="end">Restrooms</text>
+                </svg>
+            </div>
+
+            <p class="text-gray-400 mt-4">Your current check-in location is marked on the map.</p>
+            <button id="close-map-button" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors modal-close-btn">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
     </div>
 
-    <!-- =================================== -->
-    <!-- JAVASCRIPT LOGIC                  -->
-    <!-- =================================== -->
+    <!-- Blockchain Verification Modal -->
+    <div id="blockchain-modal" class="fixed inset-0 bg-black bg-opacity-80 backdrop-filter backdrop-blur-md flex items-center justify-center p-4 z-50 hidden animate-fadeIn">
+        <div class="bg-gray-900 border border-gray-700 rounded-lg p-8 w-full max-w-md relative animate-fadeInUp">
+            <h2 class="text-2xl font-bold mb-6 text-center text-glow" style="--glow-color: var(--color-green);">Verifying Authenticity</h2>
+            <ul class="space-y-4">
+                <!-- Verification steps will be added here by JS -->
+            </ul>
+            <div id="verification-result" class="text-center mt-6">
+                <!-- Final result shown here -->
+            </div>
+            <button id="close-blockchain-button" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors modal-close-btn">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Sustainability Stats Modal -->
+    <div id="stats-modal" class="fixed inset-0 bg-black bg-opacity-80 backdrop-filter backdrop-blur-md flex items-center justify-center p-4 z-50 hidden animate-fadeIn">
+        <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 w-full max-w-lg relative animate-fadeInUp">
+            <h2 class="text-2xl font-bold mb-6 text-glow" style="--glow-color: var(--color-mint);">Sustainability Stats</h2>
+            
+            <!-- Animated Stats -->
+            <div class="mb-6">
+                <p class="text-lg text-gray-300">Total Water Logged:</p>
+                <span id="stats-modal-liters" class="text-5xl font-bold" style="color: var(--color-mint);">3.0</span>
+                <span class="text-xl text-gray-300">Liters</span>
+            </div>
+
+            <!-- Animated Bar Graph -->
+            <div class="mb-6">
+                <div class="flex justify-between text-lg text-gray-300 mb-2">
+                    <p>Refill Goal</p>
+                    <span id="stats-modal-refills">4 / 20</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-4">
+                    <div id="stats-modal-bar" class="h-4 rounded-full animate-grow-bar" style="background-color: var(--color-mint); --bar-width: 20%;">
+                        <!-- Bar width will be set by JS -->
+                    </div>
+                </div>
+                <p class="text-sm text-gray-400 mt-2">You've saved 4 plastic bottles from landfill!</p>
+            </div>
+
+            <!-- Download Button -->
+            <button id="download-stats-button" class="btn-animated btn-mint w-full font-bold py-3 px-4 rounded-lg transition-all">
+                Download Stats (PDF)
+            </button>
+            
+            <!-- Close Button -->
+            <button id="close-stats-button" class="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors modal-close-btn">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </div>
+
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const scanScreen = document.getElementById('scan-screen');
-            const authScreen = document.getElementById('auth-screen');
-            const dashboardScreen = document.getElementById('dashboard-screen');
+        // --- BOLDER Animated Cursor Logic ---
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorRing = document.getElementById('cursor-ring');
+        let dotX = 0, dotY = 0;
+        let ringX = 0, ringY = 0;
 
-            const pinInputs = document.querySelectorAll('.pin-input');
-            const verifyButton = document.getElementById('verify-button');
-            const authError = document.getElementById('auth-error');
-
-            const logRefillButton = document.getElementById('log-refill-button');
-            const logList = document.getElementById('log-list');
-            const securityTipText = document.getElementById('security-tip-text');
-
-            const totalLitersEl = document.getElementById('total-liters');
-            const reportFoundButton = document.getElementById('report-found-button');
-            
-            // --- NEW: Dashboard value elements for animation ---
-            const ecoRefillsEl = document.getElementById('eco-refills');
-            const ecoPointsEl = document.getElementById('eco-points');
-
-            // --- CONSTANTS & STATE ---
-            const HARDCODED_PIN = "1234";
-            const BOTTLE_ML = 750; // Bottle size in ML
-            let totalMlDrunk = 3000; // Start with 4 refills (4 * 750ml)
-
-            // --- 1. Simulation Flow ---
-            
-            // Start by showing the scan screen, then move to auth
-            setTimeout(() => {
-                scanScreen.classList.add('hidden');
-                authScreen.classList.remove('hidden');
-                authScreen.classList.add('flex');
-                pinInputs[0].focus(); // Focus the first PIN input
-            }, 3000); // Simulate 3 seconds of scanning
-
-            
-            // --- 2. Authentication Logic ---
-            
-            // Handle PIN input and auto-tabbing
-            pinInputs.forEach((input, index) => {
-                input.addEventListener('keyup', (e) => {
-                    const value = input.value;
-                    if (e.key >= 0 && e.key <= 9) { // On number input
-                        if (value.length === 1 && index < pinInputs.length - 1) {
-                            pinInputs[index + 1].focus();
-                        }
-                    } else if (e.key === 'Backspace') { // On backspace
-                        if (index > 0) {
-                            pinInputs[index - 1].focus();
-                        }
-                    }
-                });
-
-                input.addEventListener('input', () => {
-                    // Force numeric only (simple version)
-                    input.value = input.value.replace(/[^0-9]/g, '');
-                });
-            });
-
-            // Handle Verify Button Click
-            verifyButton.addEventListener('click', () => {
-                const enteredPin = Array.from(pinInputs).map(input => input.value).join('');
-
-                if (enteredPin === HARDCODED_PIN) {
-                    // Success
-                    authScreen.classList.add('hidden');
-                    authScreen.classList.remove('flex');
-                    dashboardScreen.classList.remove('hidden');
-                    
-                    // --- *** NEW ANIMATIONS *** ---
-                    // Start the constellation background
-                    initConstellation();
-                    animateConstellation();
-
-                    // Animate the numbers ticking up
-                    animateValue(totalLitersEl, 0, parseFloat(totalLitersEl.textContent), 1500);
-                    animateValue(ecoRefillsEl, 0, parseInt(ecoRefillsEl.textContent), 1500);
-                    animateValue(ecoPointsEl, 0, parseInt(ecoPointsEl.textContent), 1500);
-                    // --- *** END NEW ANIMATIONS *** ---
-
-                    updateHydrationStats(); // Set initial hydration stats
-                    startSecurityTipRotator();
-                } else {
-                    // Failure
-                    authError.classList.remove('hidden');
-                    authError.classList.add('animate-shake');
-                    pinInputs.forEach(input => input.value = '');
-                    pinInputs[0].focus();
-                    
-                    // Remove shake animation after it finishes
-                    setTimeout(() => {
-                        authError.classList.remove('animate-shake');
-                    }, 300);
-                }
-            });
-
-            // --- 3. Dashboard Logic ---
-
-            // --- NEW: Animate value function ---
-            function animateValue(obj, start, end, duration) {
-                let startTimestamp = null;
-                const step = (timestamp) => {
-                    if (!startTimestamp) startTimestamp = timestamp;
-                    const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                    let value = start + (end - start) * progress;
-
-                    if (obj.id === 'total-liters') {
-                        obj.innerHTML = value.toFixed(1); // For decimals
-                    } else {
-                        obj.innerHTML = Math.floor(value); // For integers
-                    }
-                    
-                    if (progress < 1) {
-                        window.requestAnimationFrame(step);
-                    }
-                };
-                window.requestAnimationFrame(step);
-            }
-
-            function updateHydrationStats() {
-                const totalLiters = (totalMlDrunk / 1000).toFixed(1); // Calculate liters
-                totalLitersEl.textContent = totalLiters;
-                // In a real app, you might update a progress bar here
-            }
-
-            // Log Refill Button
-            logRefillButton.addEventListener('click', () => {
-                const now = new Date();
-                const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                // --- UPDATE STATE ---
-                // Animate from current value to new value
-                const startLiters = parseFloat(totalLitersEl.textContent);
-                totalMlDrunk += BOTTLE_ML;
-                const endLiters = totalMlDrunk / 1000;
-                
-                animateValue(totalLitersEl, startLiters, endLiters, 500); // 500ms animation
-
-                // --- UPDATE LOG LIST ---
-                const newLog = document.createElement('li');
-                newLog.textContent = `Refill (750ml) logged: ${timeString}`; // Updated text
-                newLog.classList.add('animate-fadeInDown'); // Add a little animation
-                newLog.style.animationDuration = '0.3s';
-                
-                logList.prepend(newLog); // Add new log to the top
-            });
-
-            // --- NEW EVENT LISTENER for Report Found ---
-            reportFoundButton.addEventListener('click', () => {
-                // 1. Change text to "Notifying..."
-                reportFoundButton.textContent = 'Notifying Owner...';
-                reportFoundButton.disabled = true; // Disable it
-
-                // 2. Simulate email sending
-                setTimeout(() => {
-                    // 3. Change text to "Owner Notified!"
-                    reportFoundButton.textContent = 'Owner Notified!';
-                    // We can also change its style to a "success" state.
-                    reportFoundButton.style.borderColor = 'var(--color-mint)';
-                    // Update the --btn-grad variable to a green gradient
-                    reportFoundButton.style.setProperty('--btn-grad', 'linear-gradient(90deg, var(--color-mint), var(--color-green))');
-                }, 2000); // Simulate 2-second delay
-            });
-
-            // Security Tip Rotator
-            const tips = [
-                "Remember to stay hydrated... and change your passwords regularly!",
-                "This bottle is verified authentic. Stay safe from counterfeits!",
-                "You've saved 84 plastic bottles! Keep up the great eco-work!",
-                "This bottle is digitally linked to Sujal. Don't get 'phished' by fake property!",
-                "HydraID uses a unique signature, just like a secure website uses SSL."
-            ];
-            let tipIndex = 0;
-
-            function startSecurityTipRotator() {
-                setInterval(() => {
-                    tipIndex = (tipIndex + 1) % tips.length;
-                    
-                    // Fade out
-                    securityTipText.style.opacity = 0;
-                    
-                    // Wait for fade out, then change text and fade in
-                    setTimeout(() => {
-                        securityTipText.textContent = tips[tipIndex];
-                        securityTipText.style.opacity = 1;
-                    }, 300);
-
-                }, 5000); // Change tip every 5 seconds
-            }
-
-
-            // --- *** NEW: CONSTELLATION BACKGROUND LOGIC *** ---
-            const canvas = document.getElementById('constellation-bg');
-            const ctx = canvas.getContext('2d');
-            let particlesArray;
-
-            // Mouse object
-            const mouse = {
-                x: null,
-                y: null,
-                radius: 100 // Radius for mouse interaction
-            };
-
-            window.addEventListener('mousemove', (event) => {
-                mouse.x = event.x;
-                mouse.y = event.y;
-            });
-            window.addEventListener('mouseout', () => {
-                mouse.x = undefined;
-                mouse.y = undefined;
-            });
-
-            // Particle class
-            class Particle {
-                constructor(x, y, directionX, directionY, size, color) {
-                    this.x = x;
-                    this.y = y;
-                    this.directionX = directionX;
-                    this.directionY = directionY;
-                    this.size = size;
-                    this.color = color;
-                }
-
-                // Method to draw individual particle
-                draw() {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
-                    ctx.fillStyle = this.color;
-                    ctx.fill();
-                }
-
-                // Check particle position, check mouse position, move the particle, draw the particle
-                update() {
-                    // Check if particle is still within canvas
-                    if (this.x > canvas.width || this.x < 0) {
-                        this.directionX = -this.directionX;
-                    }
-                    if (this.y > canvas.height || this.y < 0) {
-                        this.directionY = -this.directionY;
-                    }
-                    
-                    // Move particle
-                    this.x += this.directionX;
-                    this.y += this.directionY;
-                    this.draw();
-                }
-            }
-
-            // Create particle array
-            function initConstellation() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                particlesArray = [];
-                let numberOfParticles = (canvas.height * canvas.width) / 9000;
-                for (let i = 0; i < numberOfParticles; i++) {
-                    let size = (Math.random() * 1.5) + 0.5; // size 0.5 to 2
-                    let x = (Math.random() * ((canvas.width - size * 2) - (size * 2)) + size * 2);
-                    let y = (Math.random() * ((canvas.height - size * 2) - (size * 2)) + size * 2);
-                    let directionX = (Math.random() * 0.4) - 0.2; // -0.2 to 0.2
-                    let directionY = (Math.random() * 0.4) - 0.2;
-                    let color = 'rgba(5, 214, 228, 0.5)'; // Use --color-cyan with opacity
-
-                    particlesArray.push(new Particle(x, y, directionX, directionY, size, color));
-                }
-            }
-
-            // Animation loop
-            function animateConstellation() {
-                requestAnimationFrame(animateConstellation);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                for (let i = 0; i < particlesArray.length; i++) {
-                    particlesArray[i].update();
-                }
-                connect();
-            }
-
-            // Draw lines between particles
-            function connect() {
-                let opacityValue = 1;
-                for (let a = 0; a < particlesArray.length; a++) {
-                    for (let b = a + 1; b < particlesArray.length; b++) {
-                        let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x)) +
-                                     ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
-                        
-                        // Draw line between particles if they are close
-                        if (distance < (canvas.width / 7) * (canvas.height / 7)) {
-                            opacityValue = 1 - (distance / 20000);
-                            ctx.strokeStyle = `rgba(5, 214, 228, ${opacityValue})`; // Use --color-cyan
-                            ctx.lineWidth = 0.5;
-                            ctx.beginPath();
-                            ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                            ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
-                            ctx.stroke();
-                        }
-                    }
-
-                    // Check for mouse interaction
-                    if (mouse.x && mouse.y) {
-                         let distanceToMouse = ((particlesArray[a].x - mouse.x) * (particlesArray[a].x - mouse.x)) +
-                                             ((particlesArray[a].y - mouse.y) * (particlesArray[a].y - mouse.y));
-                        
-                        if (distanceToMouse < mouse.radius * mouse.radius) {
-                             opacityValue = 1 - (distanceToMouse / (mouse.radius * mouse.radius));
-                             ctx.strokeStyle = `rgba(102, 255, 188, ${opacityValue})`; // Use --color-mint /* LIME -> MINT */
-                             ctx.lineWidth = 1;
-                             ctx.beginPath();
-                             ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
-                             ctx.lineTo(mouse.x, mouse.y);
-                             ctx.stroke();
-                        }
-                    }
-                }
-            }
-
-            // Resize event
-            window.addEventListener('resize', () => {
-                initConstellation();
-            });
-
+        window.addEventListener('mousemove', (e) => {
+            // Move the dot directly
+            dotX = e.clientX;
+            dotY = e.clientY;
+            cursorDot.style.left = `${dotX}px`;
+            cursorDot.style.top = `${dotY}px`;
         });
+
+        // Use requestAnimationFrame for smoother ring movement
+        function animateRing() {
+            // Lerp (linear interpolation) for smooth "lagging" effect
+            ringX += (dotX - ringX) * 0.2;
+            ringY += (dotY - ringY) * 0.2;
+            
+            cursorRing.style.left = `${ringX}px`;
+            cursorRing.style.top = `${ringY}px`;
+            
+            requestAnimationFrame(animateRing);
+        }
+        animateRing();
+
+        // Add hover effect listeners
+        const interactiveElements = document.querySelectorAll('button, a, input, .modal-close-btn');
+        interactiveElements.forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                document.body.dataset.hover = 'true';
+            });
+            el.addEventListener('mouseleave', () => {
+                document.body.dataset.hover = 'false';
+            });
+        });
+        // --- End Animated Cursor Logic ---
+
+
+        // --- Screen Navigation ---
+        const screenScan = document.getElementById('screen-scan');
+        const screenAuth = document.getElementById('screen-auth');
+        const screenDashboard = document.getElementById('screen-dashboard');
+        
+        // Simulate scanning
+        setTimeout(() => {
+            screenScan.classList.add('hidden');
+            screenAuth.classList.remove('hidden');
+        }, 2000); // 2 second scan
+
+        // --- Authentication Logic ---
+        const pinInputsContainer = document.getElementById('pin-inputs');
+        const pinInputs = Array.from(pinInputsContainer.querySelectorAll('input'));
+        const authButton = document.getElementById('auth-button');
+        const authError = document.getElementById('auth-error');
+        const correctPin = "1234";
+
+        pinInputsContainer.addEventListener('keyup', (e) => {
+            const target = e.target;
+            const next = target.nextElementSibling;
+            const prev = target.previousElementSibling;
+
+            if (target.value.length > 0) {
+                if (next) {
+                    next.focus();
+                } else {
+                    authButton.focus(); // Focus button on last input
+                }
+            } else if (e.key === 'Backspace') {
+                if (prev) {
+                    prev.focus();
+                }
+            }
+        });
+
+        authButton.addEventListener('click', () => {
+            let enteredPin = pinInputs.map(input => input.value).join('');
+
+            if (enteredPin === correctPin) {
+                // Correct PIN
+                authButton.textContent = 'Verifying...';
+                authButton.disabled = true;
+                authError.classList.add('hidden'); // Hide error if it was visible
+
+                setTimeout(() => {
+                    screenAuth.classList.add('hidden');
+                    screenDashboard.classList.remove('hidden');
+                    // Animate numbers on dashboard load
+                    animateNumber('total-liters', 0, 3.0, 1500, 1);
+                    animateNumber('total-refills', 0, 4, 1500, 0);
+                }, 1500);
+
+            } else {
+                // Incorrect PIN
+                authError.classList.remove('hidden'); // Show error message
+                pinInputsContainer.classList.add('animate-shake'); // Shake the inputs
+                
+                // Reset inputs
+                pinInputs.forEach(input => input.value = '');
+                pinInputs[0].focus(); // Focus the first input
+
+                // Remove shake animation after it finishes
+                setTimeout(() => {
+                    pinInputsContainer.classList.remove('animate-shake');
+                }, 300);
+            }
+        });
+
+        // --- Dashboard Logic ---
+
+        // Hydration Log
+        const logRefillButton = document.getElementById('log-refill-button');
+        const totalLitersEl = document.getElementById('total-liters');
+        const totalRefillsEl = document.getElementById('total-refills');
+        const logList = document.getElementById('log-list');
+        let totalLiters = 3.0; // Start at 3.0L
+        let totalRefills = 4; // Start at 4 refills
+        const refillGoal = 20;
+
+        logRefillButton.addEventListener('click', () => {
+            totalLiters += 0.75;
+            totalRefills += 1;
+            
+            totalLitersEl.textContent = totalLiters.toFixed(1);
+            totalRefillsEl.textContent = totalRefills;
+
+            const now = new Date();
+            const timeString = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+            
+            const newLogEntry = document.createElement('li');
+            newLogEntry.textContent = `Refill (750ml) logged: ${timeString}`;
+            logList.prepend(newLogEntry); // Add to top
+        });
+
+        // Report Found Button
+        const reportFoundButton = document.getElementById('report-found-button');
+        reportFoundButton.addEventListener('click', () => {
+            reportFoundButton.disabled = true;
+            reportFoundButton.textContent = 'Notifying Owner...';
+            
+            setTimeout(() => {
+                reportFoundButton.textContent = 'Owner Notified!';
+                reportFoundButton.classList.remove('btn-red');
+                reportFoundButton.classList.add('btn-green');
+            }, 2000);
+        });
+        
+        // --- Sustainability Stats Modal Logic ---
+        const statsModal = document.getElementById('stats-modal');
+        const openStatsModalButton = document.getElementById('open-stats-modal-button');
+        const closeStatsButton = document.getElementById('close-stats-button');
+        const downloadStatsButton = document.getElementById('download-stats-button');
+
+        const statsModalLiters = document.getElementById('stats-modal-liters');
+        const statsModalRefills = document.getElementById('stats-modal-refills');
+        const statsModalBar = document.getElementById('stats-modal-bar');
+
+        openStatsModalButton.addEventListener('click', () => {
+            // 1. Get current values
+            const currentLiters = parseFloat(totalLitersEl.textContent);
+            const currentRefills = parseInt(totalRefillsEl.textContent);
+            const refillPercent = Math.min((currentRefills / refillGoal) * 100, 100);
+
+            // 2. Update modal text and bar
+            statsModalRefills.textContent = `${currentRefills} / ${refillGoal}`;
+            statsModalBar.style.setProperty('--bar-width', `${refillPercent}%`);
+            
+            // 3. Reset bar animation to force it to run again
+            statsModalBar.classList.remove('animate-grow-bar');
+            void statsModalBar.offsetWidth; // Trigger reflow
+            statsModalBar.classList.add('animate-grow-bar');
+
+            // 4. Animate number tick-up
+            animateNumber('stats-modal-liters', 0, currentLiters, 1000, 1);
+            
+            // 5. Show modal
+            statsModal.classList.remove('hidden');
+        });
+
+        closeStatsButton.addEventListener('click', () => {
+            statsModal.classList.add('hidden');
+        });
+
+        statsModal.addEventListener('click', (e) => {
+            if (e.target === statsModal) {
+                statsModal.classList.add('hidden');
+            }
+        });
+
+        // PDF Generation (now inside the modal button)
+        downloadStatsButton.addEventListener('click', async () => {
+            downloadStatsButton.disabled = true;
+            downloadStatsButton.textContent = 'Generating Report...';
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Get current stats
+            const currentLiters = totalLitersEl.textContent;
+            const currentRefills = totalRefillsEl.textContent;
+            const logItems = logList.querySelectorAll('li');
+            
+            // Build PDF content
+            doc.setFont('Fira Code', 'bold');
+            doc.setFontSize(22);
+            doc.text("HydraID Sustainability Stats", 20, 20);
+            
+            doc.setFont('Fira Code', 'normal');
+            doc.setFontSize(16);
+            doc.text(`Bottle ID: HYDRA-DEMO-001`, 20, 30);
+            doc.text(`Report Generated: ${new Date().toLocaleString()}`, 20, 40);
+
+            doc.setLineWidth(0.5);
+            doc.line(20, 45, 190, 45);
+
+            doc.setFontSize(18);
+            doc.text("Total Impact:", 20, 55);
+            doc.setFontSize(14);
+            doc.text(`- Total Refills: ${currentRefills}`, 25, 65);
+            doc.text(`- Total Water Logged: ${currentLiters} Liters`, 25, 75);
+            doc.text(`- Plastic Bottles Saved: ${currentRefills}`, 25, 85);
+
+            doc.setFontSize(18);
+            doc.text("Detailed Log:", 20, 100);
+            doc.setFontSize(12);
+            
+            let y = 110;
+            logItems.forEach(item => {
+                if (y > 270) { // Avoid page overflow
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(`- ${item.textContent}`, 25, y);
+                y += 7;
+            });
+
+            // Simulate generation time
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            doc.save('HydraID_Stats.pdf');
+            
+            downloadStatsButton.disabled = false;
+            downloadStatsButton.textContent = 'Download Stats (PDF)';
+        });
+
+        // --- Event Map Modal Logic ---
+        const viewMapButton = document.getElementById('view-map-button');
+        const closeMapButton = document.getElementById('close-map-button');
+        const mapModal = document.getElementById('map-modal');
+
+        viewMapButton.addEventListener('click', () => {
+            mapModal.classList.remove('hidden');
+        });
+
+        closeMapButton.addEventListener('click', () => {
+            mapModal.classList.add('hidden');
+        });
+
+        mapModal.addEventListener('click', (e) => {
+            // Close if clicking on the background
+            if (e.target === mapModal) {
+                mapModal.classList.add('hidden');
+            }
+        });
+
+        // --- Blockchain Verification Modal Logic ---
+        const verifyBlockchainButton = document.getElementById('verify-blockchain-button');
+        const blockchainModal = document.getElementById('blockchain-modal');
+        const closeBlockchainButton = document.getElementById('close-blockchain-button');
+        const verificationStepsList = blockchainModal.querySelector('ul');
+        const verificationResult = document.getElementById('verification-result');
+
+        verifyBlockchainButton.addEventListener('click', () => {
+            verifyBlockchainButton.disabled = true;
+            verifyBlockchainButton.textContent = 'Verifying...';
+            
+            // Reset modal state
+            verificationStepsList.innerHTML = '';
+            verificationResult.innerHTML = '';
+            blockchainModal.classList.remove('hidden');
+
+            // Simulate verification steps
+            const steps = [
+                "Connecting to decentralized ledger...",
+                "Querying batch ID '77-A9F'...",
+                "Validating manufacturing signature...",
+                "Cross-referencing distribution chain..."
+            ];
+            
+            let delay = 0;
+            steps.forEach((step, index) => {
+                setTimeout(() => {
+                    const li = document.createElement('li');
+                    // We apply 'animate-fadeInUp' here, which now has 'forwards'
+                    li.className = 'flex items-center text-gray-300 opacity-0 animate-fadeInUp'; 
+                    li.style.animationDelay = `${index * 0.1}s`;
+                    li.innerHTML = `
+                        <span class="mr-3 p-1 rounded-full animate-check-in" style="background-color: var(--color-green); opacity: 0; animation-delay: 0.2s;">
+                            <svg class="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        </span>
+                        ${step}
+                    `;
+                    verificationStepsList.appendChild(li);
+                }, delay);
+                delay += 800; // Time between steps
+            });
+
+            // Show final result
+            setTimeout(() => {
+                verificationResult.innerHTML = `
+                    <p class="text-2xl font-bold text-glow opacity-0 animate-fadeInUp" style="color: var(--color-green); --glow-color: var(--color-green); animation-delay: 0.1s;">
+                        VERIFIED GENUINE
+                    </p>
+                    <p class="text-gray-400 opacity-0 animate-fadeInUp" style="animation-delay: 0.2s;">This product's ID is unique and authentic.</p>
+                `;
+            }, delay + 500);
+        });
+
+        closeBlockchainButton.addEventListener('click', () => {
+            blockchainModal.classList.add('hidden');
+            verifyBlockchainButton.disabled = false;
+            verifyBlockchainButton.textContent = 'Verify on Blockchain (Demo)';
+        });
+
+        // Close blockchain modal on background click
+        blockchainModal.addEventListener('click', (e) => {
+            if (e.target === blockchainModal) {
+                blockchainModal.classList.add('hidden');
+                verifyBlockchainButton.disabled = false;
+                verifyBlockchainButton.textContent = 'Verify on Blockchain (Demo)';
+            }
+        });
+
+
+        // --- Animated Particle Background ---
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let mouse = { x: null, y: null };
+
+        function setCanvasSize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        setCanvasSize();
+
+        window.addEventListener('resize', setCanvasSize);
+
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+        window.addEventListener('mouseout', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * 1 - 0.5;
+                this.color = 'rgba(102, 255, 188, 0.5)'; // Use --color-mint
+            }
+            update() {
+                if (this.x > canvas.width || this.x < 0) this.speedX *= -1;
+                if (this.y > canvas.height || this.y < 0) this.speedY *= -1;
+                this.x += this.speedX;
+                this.y += this.speedY;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            let particleCount = (canvas.width * canvas.height) / 10000;
+            if (particleCount > 150) particleCount = 150; // Limit particle count
+            for (let i = 0; i < 150; i++) { // Use a fixed count for consistency
+                particles.push(new Particle());
+            }
+        }
+        initParticles();
+        window.addEventListener('resize', () => {
+            setCanvasSize();
+            initParticles();
+        });
+
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let p of particles) {
+                p.update();
+                p.draw();
+            }
+            connectParticles();
+            requestAnimationFrame(animateParticles);
+        }
+
+        function connectParticles() {
+            let maxDist = 100;
+            // Connect particles to each other
+            for (let a of particles) {
+                for (let b of particles) {
+                    if (a === b) continue;
+                    let dist = Math.sqrt((a.x - b.x)**2 + (a.y - b.y)**2);
+                    if (dist < maxDist) {
+                        ctx.strokeStyle = `rgba(102, 255, 188, ${1 - dist / maxDist})`; // --color-mint
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(a.x, a.y);
+                        ctx.lineTo(b.x, b.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            // Connect to mouse
+            if (mouse.x && mouse.y) {
+                for (let p of particles) {
+                    let dist = Math.sqrt((p.x - mouse.x)**2 + (p.y - mouse.y)**2);
+                    if (dist < 200) {
+                        ctx.strokeStyle = `rgba(5, 214, 228, ${1 - dist / 200})`; // --color-cyan
+                        ctx.lineWidth = 0.8;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(mouse.x, mouse.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        animateParticles();
+
+
+        // --- Number Animation Function ---
+        function animateNumber(id, start, end, duration, decimals = 0) {
+            const el = document.getElementById(id);
+            if (!el) return; // Guard clause
+            let startTime = null;
+
+            function animation(currentTime) {
+                if (startTime === null) startTime = currentTime;
+                const timeElapsed = currentTime - startTime;
+                const progress = Math.min(timeElapsed / duration, 1);
+                
+                let value = start + (end - start) * progress;
+                el.textContent = value.toFixed(decimals);
+
+                if (timeElapsed < duration) {
+                    requestAnimationFrame(animation);
+                } else {
+                    el.textContent = end.toFixed(decimals);
+                }
+            }
+            requestAnimationFrame(animation);
+        }
+
     </script>
+
 </body>
 </html>
